@@ -161,7 +161,7 @@ def get_total_score(
 
     return total_score
 
-if __name__ == "__main__":
+def mainscore(symbol,interval,limit):
     client = Client()  # Public data
     symbol = 'BTCUSDT'
     interval = '1h'
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     ])
     df['close'] = pd.to_numeric(df['close'], errors='coerce')
     df['volume'] = pd.to_numeric(df['volume'], errors='coerce')
-    
+
     close_prices = df['close']
     current_volume = df['volume'].iloc[-1] if len(df) > 0 else float('nan')
     average_volume = df['volume'].mean() if len(df) > 0 else float('nan')
@@ -191,3 +191,4 @@ if __name__ == "__main__":
     )
 
     print(f"Total Score: {total:.2f}/100")
+    return total

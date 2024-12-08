@@ -97,4 +97,3 @@ def decide_to_buy(total_score, hist_score, price_increase):
         return True
     return False
 
-print(decide_to_buy())
