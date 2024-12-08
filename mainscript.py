@@ -1,4 +1,5 @@
-from analysis import compute_sentiment_score,assess_historical_pattern
+from analysis import assess_historical_pattern
+from SOCIALBOTS.botsdump import sentiment_scores
 from decision import get_binance_data, assess_price_volume ,calculate_trade_amount,decide_to_buy
 from indicators import mainscore
 from execution import get_portfolio_balance, execute_trade
@@ -6,6 +7,7 @@ from binance.client import Client
 from binance.enums import *
 import os
 from dotenv import load_dotenv
+
 
 # Load environment variables
 load_dotenv()
@@ -45,7 +47,7 @@ def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symbol="BT
         price_score, volume_score, price_increase, volume_spike = assess_price_volume(post_price, post_time, coin_symbol)
 
         # 3. Sentiment Analysis
-        sentiment_score, sentiment = compute_sentiment_score(post_text)
+        sentiment_score, sentiment = sentiment_scores()
 
         # 4. Historical Data (Placeholder for future implementation)
         historical_score = 0  # Placeholder value

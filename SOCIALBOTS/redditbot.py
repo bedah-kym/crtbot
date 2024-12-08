@@ -68,34 +68,24 @@ def search_subreddits(keyword, subreddit_names=["all"], limit=10):
         logging.exception("An error occurred while searching subreddits.")
         return []
 
-def main():
+def redditposts(keyword,subreddit_input,limit_input):
+    
+    # Parse limit
     try:
-        keyword = input("Enter the keyword to search for: ").strip()
-        subreddit_input = input("Enter the subreddit(s) (comma-separated, or 'all' for global search): ").strip() or "all"
-        limit_input = input("Enter the number of posts to retrieve: ").strip() or "10"
+        limit = int(limit_input)
+    except ValueError:
+        logging.error("Invalid input for limit. Defaulting to 10.")
+        limit = 10
 
-        # Parse limit
-        try:
-            limit = int(limit_input)
-        except ValueError:
-            logging.error("Invalid input for limit. Defaulting to 10.")
-            limit = 10
+    # Parse subreddit names
+    subreddit_names = [s.strip() for s in subreddit_input.split(',')]
 
-        # Parse subreddit names
-        subreddit_names = [s.strip() for s in subreddit_input.split(',')]
+    # Perform search
+    results = search_subreddits(keyword, subreddit_names, limit)
 
-        # Perform search
-        results = search_subreddits(keyword, subreddit_names, limit)
+    # Display results
+    return results
 
-        # Display results
-        print(f"\nResults for '{keyword}' in '{', '.join(subreddit_names)}':\n")
-        for i, post in enumerate(results, 1):
-            print(f"{i}. {post['title']} (Score: {post['score']})")
-            print(f"   URL: {post['url']}")
-            print(f"   Author: {post['author']}\n")
-
-    except Exception as e:
-        logging.exception("An error occurred during execution.")
 
 if __name__ == "__main__":
-    main()
+    redditposts()
