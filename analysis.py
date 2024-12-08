@@ -89,7 +89,5 @@ def assess_historical_pattern(coin_symbol="BTCUSDT"):
     klines_data = get_historical_klines(symbol=coin_symbol, interval="1h", limit=1000)
     hist_score, details = analyze_historical_data(klines_data)
     
-    return hist_score
+    return float(hist_score)
 
-
-print(assess_historical_pattern())

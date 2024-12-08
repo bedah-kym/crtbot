@@ -96,4 +96,3 @@ def decide_to_buy(total_score, hist_score, price_increase):
     if total_score > SCORE_THRESHOLD and signals >= 2 and price_increase < 50 and hist_score >= HIST_SCORE_THRESHOLD:
         return True
     return False
-

@@ -1,8 +1,28 @@
 from analysis import compute_sentiment_score,assess_historical_pattern
-from decision import get_binance_data, assess_price_volume
+from decision import get_binance_data, assess_price_volume ,calculate_trade_amount,decide_to_buy
 from indicators import mainscore
+from execution import get_portfolio_balance, execute_trade
+from binance.client import Client
+from binance.enums import *
+import os
+from dotenv import load_dotenv
 
-def run_pump_detection_pipeline(post_text, post_price, post_time, coin_symbol="BTCUSDT", portfolio_balance=1000):
+# Load environment variables
+load_dotenv()
+api_key = os.environ.get('TEST_API_KEY')
+api_secret = os.environ.get('TEST_SECRET')
+
+
+def initialize_testnet_client(api_key: str, api_secret: str) -> Client:
+    """
+    Initialize and return Binance Testnet client.
+    """
+    client = Client(api_key, api_secret)
+    client.API_URL = 'https://testnet.binance.vision/api'  # Set the Binance testnet URL
+    return client
+
+
+def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symbol="BTCUSDT"):
     """
     Main pipeline for detecting pump-and-dump schemes.
 
@@ -29,7 +49,7 @@ def run_pump_detection_pipeline(post_text, post_price, post_time, coin_symbol="B
 
         # 4. Historical Data (Placeholder for future implementation)
         historical_score = 0  # Placeholder value
-
+        
         # Aggregate results
         results = {
             "engagement_score": engagement_score,
@@ -47,6 +67,7 @@ def run_pump_detection_pipeline(post_text, post_price, post_time, coin_symbol="B
                 "sentiment": sentiment,
             },
             "historical_score": historical_score,
+           
         }
 
         return results
@@ -55,14 +76,37 @@ def run_pump_detection_pipeline(post_text, post_price, post_time, coin_symbol="B
         print(f"Error in pipeline: {e}")
         return None
 
+def trade_execution(client,hist_score, total_score):
+    print('trading exection ....')
+    portfolio_balance = get_portfolio_balance(client,'USDT') 
+    trade_amount = calculate_trade_amount(hist_score, total_score, portfolio_balance,existing_positions_count=3)
+    print("---------trade amount to stake",trade_amount)
+
+    can_buy =decide_to_buy(hist_score,total_score,price_increase=955.535)
+    print ("---------descision to buy is :",can_buy)
+    if can_buy :
+        execute_trade(
+            client,
+            amount=trade_amount,
+            symbol = 'BTCUSDT'
+        )
+        
+          
 # Example call
 if __name__ == "__main__":
+    
     # Replace with real data for testing
-    post_text = "The price of BTC is skyrocketing! Time to buy."
-    total_score = mainscore( symbol = 'BTCUSDT',interval = '1h',limit = 500)
+    client = initialize_testnet_client(api_key, api_secret)
+    post_text = "The price of Bitcoin  is skyrocketing! Time to buy."
+    
+    total_score = mainscore(symbol = 'BTCUSDT',interval = '1h',limit = 500)
     hist_score = assess_historical_pattern()
     
     post_price = 20000.0
     post_time = "2024-12-08T12:00:00Z"
-    results = run_pump_detection_pipeline(post_text, post_price, post_time)
-    print(results)
+    
+    results = run_pump_detection_pipeline(post_text,post_price, post_time)
+    print("analysis",results)
+    
+    trade = trade_execution(client,hist_score, total_score)
+    print(trade)

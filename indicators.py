@@ -190,5 +190,5 @@ def mainscore(symbol,interval,limit):
         hist_score=hist_score
     )
 
-    print(f"Total Score: {total:.2f}/100")
-    return total
+    print(f"Total indicators Score: {total:.2f}/100")
+    return float(total)
