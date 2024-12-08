@@ -70,7 +70,7 @@ def search_posts(object_ids, keywords, access_token):
 if __name__ == "__main__":
     OBJECT_IDS = ["61550477913097", "user_profile_id_1"]  # Replace with the IDs of Pages or Profiles you want to scan
     KEYWORDS = ["funny", "interesting"]  # Replace with your list of keywords
-    ACCESS_TOKEN = "EAANOCHh5w8kBO5NU2Xv8Lsd5AGcFrjf9v9lqfatSbfG7DmetZCmW4QzFR80ypkfyafiuvMq5oJJ1Tkz9hR0vjQfTGmxd7lqMR90NYIRUfXyZBOQ6KxZCDmDFhMtOjDscamT1z4IS7AIcMMgtuZB1FkZCXwoNjJcnpiIA0hIIQBZCOSrhVZCjhbdC5HK1tB4JDIzBmNk10VfZCo25AuFx7pQfGo00E9paCN7mutBE7gHcnSKpUxXllqkNkPII8eM6bgZDZD"
+    ACCESS_TOKEN = " "
     
     
     search_posts(OBJECT_IDS, KEYWORDS, ACCESS_TOKEN)
