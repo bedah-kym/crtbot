@@ -25,7 +25,7 @@ def get_reddit_instance():
     logging.info("Reddit instance created successfully.")
     return reddit
 
-def search_subreddits(keyword, subreddit_names=["all"], limit=10):
+def search_subreddits(keyword, subreddit_names, limit=15):
     """
     Search for posts containing a keyword in specific subreddits.
 

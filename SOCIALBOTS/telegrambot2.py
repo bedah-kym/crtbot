@@ -22,7 +22,7 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 
 # Database path
-DB_PATH = os.getenv('DB_PATH', 'telegram_messages.db')
+DB_PATH = os.getenv('DB_PATH', '../db.sqlite3')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,14 +32,9 @@ logger = logging.getLogger(__name__)
 config = {
     'groups': [
         {
-            'username': 'crtjob2',  # Replace with actual group usernames
-            'keywords': ['dump', 'pump']
-        },
-        {
-            'username':'mizanicrt',
-            'keywords':['crypto','pump']
-        }
-        # Add more groups as needed
+            'username':'FairKucoinPump',
+            'keywords':['dump','pump']
+        }      
     ]
 }
 
@@ -69,9 +64,24 @@ async def save_message(group_id, group_name, sender_id, message, date):
         logger.debug(f"Message saved to database from group {group_name}.")
 
 # Asynchronous notification system
-async def send_notification(text):
+async def send_notification(data):
+    """
+    Sends a notification to a specified Telegram chat.
+    
+    Parameters:
+    - data (str or dict): The text or dictionary to send as a message.
+    """
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": text}
+    
+    if isinstance(data, dict):
+        # Format the dictionary into a readable string
+        formatted_text = "\n".join([f"{key}: {value}" for key, value in data.items()])
+    else:
+        # Use the string as-is
+        formatted_text = str(data)
+    
+    payload = {"chat_id": CHAT_ID, "text": formatted_text}
+    
     async with ClientSession() as session:
         async with session.post(url, data=payload) as response:
             if response.status != 200:
@@ -79,11 +89,11 @@ async def send_notification(text):
             else:
                 logger.info("Notification sent.")
 
+
 async def join_groups(client, group_keywords):
     logger.info("Starting to join groups...")
     for group in config['groups']:
         group_username = group['username']
-        logger.info(f"Attempting to join group: {group_username}")
         keywords = group.get('keywords', [])
         try:
             # Get the group entity
@@ -91,6 +101,7 @@ async def join_groups(client, group_keywords):
             logger.debug(f"Retrieved entity for {group_username}: {group_entity}")
             # Attempt to join the group
             try:
+                logger.info(f"Attempting to join group: {group_username}")
                 await client(JoinChannelRequest(group_entity))
                 logger.info(f"Joined group: {group_entity.title}")
             except UserAlreadyParticipantError:
@@ -106,8 +117,19 @@ async def join_groups(client, group_keywords):
         except Exception as e:
             logger.error(f"Error joining group '{group_username}': {e}")
 
-async def process_history(client, group_id, group_info, limit=100):
+async def process_history(client, group_id, group_info, limit=10):
+    """
+    Process the history of messages in a given group.
+
+    :param client: TelegramClient instance
+    :param group_id: ID of the group to process
+    :param group_info: Group metadata including keywords
+    :param limit: Maximum number of messages to fetch
+    :return: List of processed messages containing keywords
+    """
     logger.info(f"Processing history for group: {group_info['title']}")
+    processed_messages = []
+
     async for message in client.iter_messages(group_id, limit=limit):
         if message.text:
             message_text = message.text
@@ -119,13 +141,22 @@ async def process_history(client, group_id, group_info, limit=100):
                 if keyword.lower() in message_text.lower():
                     await save_message(group_id, group_info['title'], sender_id, message_text, date.isoformat())
                     notification_text = f"Keyword '{keyword}' found in {group_info['title']}:\n{message_text}"
-                    await send_notification(notification_text)
+                    #await send_notification(notification_text)
                     logger.info(notification_text)
+                    # Add the message to the processed list
+                    processed_messages.append({
+                        "group_id": group_id,
+                        "group_name": group_info['title'],
+                        "sender_id": sender_id,
+                        "message": message_text,
+                        "date": date.isoformat(),
+                        "keyword": keyword
+                    })
                     break
-                
-client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+    return processed_messages
 
-async def main():
+
+async def TelegramPosts():
     # Initialize database
     await init_db()
     logger.info("Database initialized.")
@@ -144,10 +175,11 @@ async def main():
     await join_groups(client, group_keywords)
     logger.info("Groups joined.")
 
-    # Process history
     logger.info("Processing message history...")
+    all_processed_messages = []  # To store all history messages from groups
     for group_id, group_info in group_keywords.items():
-        await process_history(client, group_id, group_info, limit=100)
+        processed_messages = await process_history(client, group_id, group_info, limit=100)
+        all_processed_messages.extend(processed_messages)
     logger.info("Message history processed.")
 
     # Register event handler
@@ -168,16 +200,15 @@ async def main():
                     notification_text = f"Keyword '{keyword}' found in {group_name}:\n{message_text}"
                     await send_notification(notification_text)
                     logger.info(notification_text)
-                    break  # Process the first matching keyword
 
     # Start listening for new messages
-    logger.info("Userbot is running...")
-    await client.run_until_disconnected()
-
+    logger.info("Userbot is terminated...")
+    await client.disconnect()
+    return all_processed_messages
 
 if __name__ == '__main__':
     try:
-        asyncio.run(main())
+        asyncio.run(TelegramPosts())
     except KeyboardInterrupt:
         logger.info("User interrupted the script. Shutting down...")
     except Exception as e:

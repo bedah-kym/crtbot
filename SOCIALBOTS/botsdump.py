@@ -1,4 +1,6 @@
+import asyncio
 from .redditbot import redditposts
+from .telegrambot2 import TelegramPosts
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 try:
@@ -30,10 +32,13 @@ def compute_sentiment_score(post_text, analyzer):
     # VADER's 'compound' score ranges from -1 (negative) to +1 (positive)
     # Transform it to [0,1] range
     sentiment = (scores['compound'] + 1) / 2.0  
-    # Example categorization
-    if sentiment > 0.66:
+    if sentiment >= 0.75:
+        sentiment_category = 'Very Positive'
+    elif sentiment >= 0.5:
         sentiment_category = 'Positive'
-    elif sentiment < 0.34:
+    elif sentiment <= 0.25:
+        sentiment_category = 'Very Negative'
+    elif sentiment <= 0.5:
         sentiment_category = 'Negative'
     else:
         sentiment_category = 'Neutral'
@@ -51,17 +56,22 @@ def analyze_sentiments(posts):
     total_sentiment = 0
     for post in posts:
         # Concatenate the title and any additional text (if available)
-        post_text = post.get('title', '') + ' ' + post.get('selftext', '')
+        post_text = post.get('title', 'group_name') + ' ' + post.get('selftext', 'message') 
         sentiment, category = compute_sentiment_score(post_text, analyzer)
-        print(f"Post: {post['title']}")
+        if 'title' in post and post['title']:
+             print(f"Post: {post['title']}")
+        else:
+            print(f"Message: {post['message']}")
         print(f"Sentiment Score: {sentiment:.2f} ({category})\n")
         total_sentiment += sentiment
     average_sentiment = total_sentiment / len(posts) if posts else 0
     return average_sentiment
     
      
-def sentiment_scores():
-    parsed_posts=parse_posts(redditposts("bitcoin","CryptoCurrency",10))
+async def sentiment_scores():
+    telegram_posts = parse_posts(await TelegramPosts())
+    reddit_posts=parse_posts(redditposts("bitcoin","CryptoCurrency",10))
+    parsed_posts = telegram_posts+reddit_posts
     sentiment = analyze_sentiments(parsed_posts)
     if sentiment > 0.66:
         sentiment_category = 'Positive'
@@ -73,4 +83,5 @@ def sentiment_scores():
     # Return both sentiment score and category
     return sentiment, sentiment_category
 
-#sentiment_scores()
+if __name__ == "__main__":
+    asyncio.run(sentiment_scores())

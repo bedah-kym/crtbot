@@ -1,30 +1,50 @@
+import nest_asyncio
+import asyncio
 from analysis import assess_historical_pattern
 from SOCIALBOTS.botsdump import sentiment_scores
 from decision import get_binance_data, assess_price_volume ,calculate_trade_amount,decide_to_buy
 from indicators import mainscore
 from execution import get_portfolio_balance, execute_trade
 from binance.client import Client
+from SOCIALBOTS.telegrambot2 import send_notification
 from binance.enums import *
 import os
 from dotenv import load_dotenv
 
+nest_asyncio.apply()
 
 # Load environment variables
 load_dotenv()
 api_key = os.environ.get('TEST_API_KEY')
 api_secret = os.environ.get('TEST_SECRET')
 
-
-def initialize_testnet_client(api_key: str, api_secret: str) -> Client:
+async def initialize_testnet_client(api_key: str, api_secret: str):
     """
-    Initialize and return Binance Testnet client.
+    Set up Binance testnet client within async context manager.
     """
     client = Client(api_key, api_secret)
-    client.API_URL = 'https://testnet.binance.vision/api'  # Set the Binance testnet URL
+    client.API_URL = 'https://testnet.binance.vision/api'
+    
     return client
+   
+def get_market_precision(client, symbol):
+    """
+    Fetch the precision for a given trading pair.
+    """
+    exchange_info = client.get_exchange_info()
+    for symbol_info in exchange_info['symbols']:
+        if symbol_info['symbol'] == symbol:
+            lot_size_filter = next(
+                filter(lambda x: x['filterType'] == 'LOT_SIZE', symbol_info['filters'])
+            )
+            return int(lot_size_filter['stepSize'].rstrip('0').find('.'))
+    return 0  # Default precision
+
+def round_quantity(quantity, precision):
+    return round(quantity, precision)
 
 
-def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symbol="BTCUSDT"):
+async def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symbol="BTCUSDT"):
     """
     Main pipeline for detecting pump-and-dump schemes.
 
@@ -47,7 +67,7 @@ def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symbol="BT
         price_score, volume_score, price_increase, volume_spike = assess_price_volume(post_price, post_time, coin_symbol)
 
         # 3. Sentiment Analysis
-        sentiment_score, sentiment = sentiment_scores()
+        sentiment_score, sentiment = await sentiment_scores()
 
         # 4. Historical Data (Placeholder for future implementation)
         historical_score = 0  # Placeholder value
@@ -78,37 +98,55 @@ def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symbol="BT
         print(f"Error in pipeline: {e}")
         return None
 
-def trade_execution(client,hist_score, total_score):
-    print('trading exection ....')
-    portfolio_balance = get_portfolio_balance(client,'USDT') 
-    trade_amount = calculate_trade_amount(hist_score, total_score, portfolio_balance,existing_positions_count=3)
-    print("---------trade amount to stake",trade_amount)
+async def trade_execution(client, hist_score, total_score):
+    print('Trading execution...')
+    portfolio_balance = get_portfolio_balance(client, 'USDT')
+    
+    # Fetch trading pair precision
+    precision = get_market_precision(client, 'BTCUSDT')
 
-    can_buy =decide_to_buy(hist_score,total_score,price_increase=955.535)
-    print ("---------descision to buy is :",can_buy)
-    if can_buy :
-        execute_trade(
-            client,
-            amount=trade_amount,
-            symbol = 'BTCUSDT'
-        )
-        
-          
-# Example call
-if __name__ == "__main__":
+    trade_amount = calculate_trade_amount(hist_score, total_score, portfolio_balance, existing_positions_count=5)
+    trade_amount = round_quantity(trade_amount, precision)  # Round to correct precision
+    print("---------Trade amount to stake:", trade_amount)
+
+    can_buy = decide_to_buy(hist_score, total_score, price_increase=955.535)
+    print("---------Decision to buy is:", can_buy)
+
+    if not can_buy:
+        try:
+            order = execute_trade(
+                client,
+                amount=0.001,
+                symbol='BTCUSDT'
+            )
+            print(order)
+            await send_notification(order)
+        except Exception as e:
+            print(f"Order execution failed: {e}")
+            await send_notification(f"Order execution failed: {e}")
+    else:
+        await send_notification("No buy signal")
+
+
+async def main():
+    client = await initialize_testnet_client(api_key, api_secret)
+    post_text = "The price of Bitcoin is skyrocketing! Time to buy."
     
-    # Replace with real data for testing
-    client = initialize_testnet_client(api_key, api_secret)
-    post_text = "The price of Bitcoin  is skyrocketing! Time to buy."
-    
-    total_score = mainscore(symbol = 'BTCUSDT',interval = '1h',limit = 500)
+    total_score = mainscore(symbol='BTCUSDT', interval='1h', limit=500)
     hist_score = assess_historical_pattern()
     
     post_price = 20000.0
     post_time = "2024-12-08T12:00:00Z"
     
-    results = run_pump_detection_pipeline(post_text,post_price, post_time)
-    print("analysis",results)
+    results = await run_pump_detection_pipeline(post_text, post_price, post_time)
+    print("analysis", results)
     
-    trade = trade_execution(client,hist_score, total_score)
-    print(trade)
+    await trade_execution(client, hist_score, total_score)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+   
+
+
+    
+   
