@@ -60,7 +60,7 @@ async def run_pump_detection_pipeline(post_text, post_price, post_time,coin_symb
     """
     try:
         # 1. Engagement metrics (Placeholder for future implementation)
-        engagement_score = len(post_text)  # Simplistic placeholder
+        engagement_score = len(post_text)*20 # Simplistic placeholder
 
         # 2. Price & Volume Analysis
         binance_price, price_change_percent, volume = get_binance_data(coin_symbol)
@@ -112,11 +112,11 @@ async def trade_execution(client, hist_score, total_score):
     can_buy = decide_to_buy(hist_score, total_score, price_increase=955.535)
     print("---------Decision to buy is:", can_buy)
 
-    if not can_buy:
+    if can_buy:
         try:
             order = execute_trade(
                 client,
-                amount=0.001,
+                amount= trade_amount,
                 symbol='BTCUSDT'
             )
             print(order)

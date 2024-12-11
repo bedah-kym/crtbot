@@ -13,7 +13,7 @@ def parse_posts(posts):
     """
     Parses and prints the fetched posts.
 
-    :param posts: List of dictionaries representing Reddit posts
+    :param posts: List of dictionaries representing posts
     """
     parsed_posts = []
     for i, post in enumerate(posts, 1):
@@ -29,9 +29,7 @@ def compute_sentiment_score(post_text, analyzer):
     :return: Tuple of sentiment score and sentiment category
     """
     scores = analyzer.polarity_scores(post_text)
-    # VADER's 'compound' score ranges from -1 (negative) to +1 (positive)
-    # Transform it to [0,1] range
-    sentiment = (scores['compound'] + 1) / 2.0  
+    sentiment = (scores['compound'] + 1) / 2.0  # Transform to [0, 1] range
     if sentiment >= 0.75:
         sentiment_category = 'Very Positive'
     elif sentiment >= 0.5:
@@ -47,33 +45,52 @@ def compute_sentiment_score(post_text, analyzer):
 
 def analyze_sentiments(posts):
     """
-    Analyzes sentiments of a list of Reddit posts.
+    Analyzes sentiments of a list of posts, using engagement score as weight.
 
-    :param posts: List of dictionaries representing Reddit posts
-    :return: Average sentiment score
+    :param posts: List of dictionaries representing posts
+    :return: Weighted average sentiment score
     """
     analyzer = SentimentIntensityAnalyzer()
-    total_sentiment = 0
+    total_weighted_sentiment = 0
+    total_engagement = 0
+
     for post in posts:
-        # Concatenate the title and any additional text (if available)
         post_text = post.get('title', 'group_name') + ' ' + post.get('selftext', 'message') 
         sentiment, category = compute_sentiment_score(post_text, analyzer)
+
+        # Normalize engagement score to [0, 1]
+        engagement_score = post.get('engagement_score', 0)
+        max_engagement = max([p.get('engagement_score', 0) for p in posts], default=1)
+        normalized_engagement = engagement_score / max_engagement if max_engagement else 0
+
+        weighted_sentiment = sentiment * normalized_engagement
+        total_weighted_sentiment += weighted_sentiment
+        total_engagement += normalized_engagement
+
         if 'title' in post and post['title']:
-             print(f"Post: {post['title']}")
+            print(f"Post: {post['title']}")
         else:
             print(f"Message: {post['message']}")
-        print(f"Sentiment Score: {sentiment:.2f} ({category})\n")
-        total_sentiment += sentiment
-    average_sentiment = total_sentiment / len(posts) if posts else 0
+        print(f"Sentiment Score: {sentiment:.2f} ({category}), Engagement Score: {engagement_score:.2f}\n")
+
+    # Calculate weighted average sentiment
+    average_sentiment = total_weighted_sentiment / total_engagement if total_engagement else 0
     return average_sentiment
     
      
 async def sentiment_scores():
+    keywords=["pump","moon","100x","buy now","HODL","FOMO","next big thing"]
+    subreddits=["CryptoCurrency", "CryptoMoonShots", "altcoin"]
+    
     telegram_posts = parse_posts(await TelegramPosts())
-    reddit_posts=parse_posts(redditposts("bitcoin","CryptoCurrency",10))
-    parsed_posts = telegram_posts+reddit_posts
+    reddit_posts = parse_posts(redditposts(keywords,subreddits, 10))
+
+    # Combine posts and ensure engagement scores are included
+    parsed_posts = telegram_posts + reddit_posts
+
     sentiment = analyze_sentiments(parsed_posts)
-    if sentiment > 0.66:
+
+    if sentiment > 0.56:
         sentiment_category = 'Positive'
     elif sentiment < 0.34:
         sentiment_category = 'Negative'

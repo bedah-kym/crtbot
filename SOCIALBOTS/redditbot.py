@@ -1,6 +1,7 @@
 import os
 import logging
 import praw
+from datetime import datetime, timezone
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,40 +26,45 @@ def get_reddit_instance():
     logging.info("Reddit instance created successfully.")
     return reddit
 
-def search_subreddits(keyword, subreddit_names, limit=15):
+def search_subreddits(keyword, subreddit_names, limit=50):
     """
-    Search for posts containing a keyword in specific subreddits.
+    Search for crypto-related pump-and-dump activity.
 
-    :param keyword: The keyword to search for.
+    :param keyword: The keyword or phrase to search for.
     :param subreddit_names: List of subreddits to search in.
-    :param limit: The number of results to retrieve.
-    :return: List of posts containing the keyword.
+    :param limit: Number of results to retrieve.
+    :return: List of relevant posts.
     """
     try:
         reddit = get_reddit_instance()
 
         # Combine subreddits into a single query
-        if "all" in subreddit_names:
-            subreddit_query = "all"
-        else:
-            subreddit_query = "+".join(subreddit_names)
-
+        subreddit_query = "+".join(subreddit_names)
         subreddit = reddit.subreddit(subreddit_query)
-        logging.info(f"Searching in subreddits: {subreddit_query}")
+        logging.info(f"Searching for pumps in subreddits: {subreddit_query}")
 
-        # Search for the keyword
-        search_results = subreddit.search(keyword, limit=limit)
+        # Perform the search
+        search_results = subreddit.search(
+            keyword,
+            limit=limit,
+            sort="new",  # Prioritize new posts
+            time_filter="day"  # Posts from the last hour
+        )
         logging.info(f"Search completed for keyword: '{keyword}'")
 
-        # Collect results
+        # Collect relevant results
         posts = []
         for post in search_results:
+            # Calculate engagement score
+            engagement_score = post.score + len(post.comments)
             posts.append({
                 "title": post.title,
                 "url": post.url,
                 "score": post.score,
+                "num_comments": len(post.comments),
                 "author": str(post.author),
-                "created_utc": post.created_utc
+                "created_utc": post.created_utc,
+                "engagement_score": engagement_score,
             })
 
         logging.info(f"Total posts retrieved: {len(posts)}")
@@ -67,6 +73,20 @@ def search_subreddits(keyword, subreddit_names, limit=15):
     except Exception as e:
         logging.exception("An error occurred while searching subreddits.")
         return []
+
+
+def calculate_engagement_score(post):
+    upvotes = post.score
+    comments = post.num_comments
+    awards = getattr(post, 'total_awards_received', 0)
+    
+    # Calculate post age in hours
+    post_age_seconds = datetime.now(timezone.utc).timestamp() - post.created_utc
+    post_age_hours = post_age_seconds / 3600
+
+    # Engagement score formula
+    engagement_score = (upvotes * 1.5) + (comments * 2) + (awards * 3) - (post_age_hours * 0.1)
+    return round(engagement_score, 2)
 
 def redditposts(keyword,subreddit_input,limit_input):
     
@@ -78,7 +98,7 @@ def redditposts(keyword,subreddit_input,limit_input):
         limit = 10
 
     # Parse subreddit names
-    subreddit_names = [s.strip() for s in subreddit_input.split(',')]
+    subreddit_names = [s.strip() for s in subreddit_input]
 
     # Perform search
     results = search_subreddits(keyword, subreddit_names, limit)
@@ -88,4 +108,6 @@ def redditposts(keyword,subreddit_input,limit_input):
 
 
 if __name__ == "__main__":
-    redditposts()
+    keywords=["pump","moon","100x","buy now","HODL","FOMO","next big thing"]
+    subreddits=["CryptoCurrency", "CryptoMoonShots", "altcoin"]
+    print(redditposts(keywords,subreddits,"10"))

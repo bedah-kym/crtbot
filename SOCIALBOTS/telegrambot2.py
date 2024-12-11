@@ -33,7 +33,7 @@ config = {
     'groups': [
         {
             'username':'FairKucoinPump',
-            'keywords':['dump','pump']
+            'keywords':["pump","moon","100x","buy now","HODL","FOMO","next big thing"]
         }      
     ]
 }
@@ -119,13 +119,13 @@ async def join_groups(client, group_keywords):
 
 async def process_history(client, group_id, group_info, limit=10):
     """
-    Process the history of messages in a given group.
+    Process the history of messages in a given group and compute engagement scores.
 
     :param client: TelegramClient instance
     :param group_id: ID of the group to process
     :param group_info: Group metadata including keywords
     :param limit: Maximum number of messages to fetch
-    :return: List of processed messages containing keywords
+    :return: List of processed messages containing keywords with engagement scores
     """
     logger.info(f"Processing history for group: {group_info['title']}")
     processed_messages = []
@@ -135,25 +135,37 @@ async def process_history(client, group_id, group_info, limit=10):
             message_text = message.text
             sender_id = message.sender_id
             date = message.date
+            message_length = len(message_text)
+
             # Check if message contains any of the keywords
             keywords = group_info['keywords']
-            for keyword in keywords:
-                if keyword.lower() in message_text.lower():
-                    await save_message(group_id, group_info['title'], sender_id, message_text, date.isoformat())
-                    notification_text = f"Keyword '{keyword}' found in {group_info['title']}:\n{message_text}"
-                    #await send_notification(notification_text)
-                    logger.info(notification_text)
-                    # Add the message to the processed list
-                    processed_messages.append({
-                        "group_id": group_id,
-                        "group_name": group_info['title'],
-                        "sender_id": sender_id,
-                        "message": message_text,
-                        "date": date.isoformat(),
-                        "keyword": keyword
-                    })
-                    break
+            keyword_matches = sum(1 for keyword in keywords if keyword.lower() in message_text.lower())
+
+            # Calculate engagement score
+            # Add weights as per your logic
+            engagement_score = (
+                keyword_matches * 5  # Weight for keyword matches
+                + message_length * 0.1  # Weight for message length
+                + (message.views or 0) * 0.2  # Weight for views (if available)
+                + (message.replies.replies if message.replies else 0) * 0.5  # Weight for replies
+            )
+
+            await save_message(group_id, group_info['title'], sender_id, message_text, date.isoformat())
+            notification_text = f"Keyword '{keywords}' found in {group_info['title']}:\n{message_text}"
+            logger.info(notification_text)
+
+            # Add the message to the processed list
+            processed_messages.append({
+                "group_id": group_id,
+                "group_name": group_info['title'],
+                "sender_id": sender_id,
+                "message": message_text,
+                "date": date.isoformat(),
+                "keyword_matches": keyword_matches,
+                "engagement_score": engagement_score,
+            })
     return processed_messages
+
 
 
 async def TelegramPosts():
