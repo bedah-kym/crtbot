@@ -1,3 +1,4 @@
+from dateutil import parser
 import requests
 
 def get_binance_data(symbol="BTCUSDT"):
@@ -10,32 +11,72 @@ def get_binance_data(symbol="BTCUSDT"):
     volume = float(data["volume"])
     return current_price, price_change_percent, volume
 
+def get_historical_data(symbol, start_time, end_time, interval="1m"):
+    """
+    Fetch historical OHLC data from Binance.
 
-def assess_price_volume(post_price, post_time, symbol="BTCUSDT"):
+    :param symbol: Cryptocurrency symbol (e.g., 'BTCUSDT').
+    :param start_time: Start time in UNIX timestamp.
+    :param end_time: End time in UNIX timestamp.
+    :param interval: Time interval for the data (e.g., '1m', '1h').
+    :return: List of historical data points.
+    """
+    url = "https://api.binance.com/api/v3/klines"
+    params = {
+        "symbol": symbol,
+        "interval": interval,
+        "startTime": int(start_time * 1000),  # Convert to milliseconds
+        "endTime": int(end_time * 1000)      # Convert to milliseconds
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        return [{"open_time": k[0], "close": float(k[4])} for k in data]  # Extract close prices
+    else:
+        raise ValueError(f"Failed to fetch historical data: {response.text}")
+
+
+def get_price_at_time(symbol, timestamp):
+    """
+    Fetch the price of the cryptocurrency at a specific timestamp.
+
+    :param symbol: Cryptocurrency symbol (e.g., 'BTCUSDT').
+    :param timestamp: Unix timestamp for the desired price.
+    :return: Price at the specified timestamp.
+    """
+    historical_data = get_historical_data(symbol, timestamp, timestamp + 60, interval="1m")
+    if historical_data:
+        return historical_data[0]['close']  # Return the close price of the first candle
+    else:
+        raise ValueError(f"Could not fetch historical price for {symbol} at {timestamp}")
+
+
+def assess_price_volume(post_time, symbol):
+    # Convert post time to timestamp
+    post_timestamp = parser.parse(post_time).timestamp()
+
+    # Fetch price at the time of the post
+    try:
+        price_at_post_time = get_price_at_time(symbol, post_timestamp)
+    except ValueError as e:
+        print(e)
+        return 0, 0, 0, 0
+
+    # Fetch current price and volume data
     current_price, price_change_percent, current_volume = get_binance_data(symbol)
-    
-    # Hypothetical: If >10% increase since post_time, but we need the actual time logic:
-    # For simplicity, assume we fetched post_price at post_time earlier.
-    price_increase = ((current_price - post_price) / post_price) * 100
-    
-    # Fetch historical volume data (could be cached or from DB)
-    # For a simple example, assume avg_24h_volume is from a previous call or a DB.
-    # To get a 24h average volume, you can rely on "volume" in the 24hr ticker and compare to some baseline.
-    _, _, avg_24h_volume = get_binance_data(symbol)  # Normally you'd store this reference before and after some interval
-    
-    volume_spike = current_volume / avg_24h_volume if avg_24h_volume else 1
-    
-    price_score = 0
-    if price_increase > 10:
-        # Add score for a significant price pump
-        price_score += 30  # Example weighting
 
-    volume_score = 0
-    if volume_spike > 3:
-        volume_score += 30  # Example weighting
+    # Calculate price increase
+    price_increase = ((current_price - price_at_post_time) / price_at_post_time) * 100
+
+    # Fetch historical volume data
+    _, _, avg_24h_volume = get_binance_data(symbol)
+    volume_spike = current_volume / avg_24h_volume if avg_24h_volume else 1
+
+    # Score calculation
+    price_score = 30 if price_increase > 10 else 0
+    volume_score = 30 if volume_spike > 3 else 0
 
     return price_score, volume_score, price_increase, volume_spike
-#print(compute_sentiment_score(text))
 
 def calculate_trade_amount(hist_score, total_score, portfolio_balance, existing_positions_count, max_allocation=0.05):
     """

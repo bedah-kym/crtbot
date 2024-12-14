@@ -152,7 +152,7 @@ async def process_history(client, group_id, group_info, limit=10):
 
             await save_message(group_id, group_info['title'], sender_id, message_text, date.isoformat())
             notification_text = f"Keyword '{keywords}' found in {group_info['title']}:\n{message_text}"
-            logger.info(notification_text)
+            #logger.info(notification_text)
 
             # Add the message to the processed list
             processed_messages.append({

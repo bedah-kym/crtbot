@@ -51,26 +51,26 @@ def get_portfolio_balance(client: Client, coin: str) -> float:
     except Exception as e:
         print(f"Failed to fetch portfolio balance for {coin}: {e}")
         return 0.0
-
-
+    
+    
 def get_open_positions(client: Client) -> dict:
     """
     Fetch and return the current open positions from Binance Futures Testnet.
     """
     try:
-        # Fetch account futures positions
+        # Fetch open orders from the client
         positions = client.get_open_orders()
         
-        # Extract and filter non-zero positions
+        # Process and filter non-zero positions
         open_positions = [
             {
-                "symbol": position['symbol'],
-                "positionAmt": float(position['positionAmt']),
-                "entryPrice": float(position['entryPrice']),
-                "unRealizedProfit": float(position['unRealizedProfit'])
+                "symbol": position.get('symbol', 'N/A'),
+                "positionAmt": float(position.get('positionAmt', 0)),
+                "entryPrice": float(position.get('entryPrice', 0)),
+                "unRealizedProfit": float(position.get('unRealizedProfit', 0))
             }
-            for position in positions['positions']
-            if float(position['positionAmt']) != 0
+            for position in positions
+            if float(position.get('positionAmt', 0)) != 0
         ]
         
         print(f"Open Positions: {open_positions}")
@@ -79,6 +79,7 @@ def get_open_positions(client: Client) -> dict:
         print(f"Failed to fetch open positions: {e}")
         return {"error": str(e)}
 
+   
 
 def execute_trade(
     client: Client, 

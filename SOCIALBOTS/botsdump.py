@@ -78,27 +78,52 @@ def analyze_sentiments(posts):
     return average_sentiment
     
      
-async def sentiment_scores():
-    keywords=["pump","moon","100x","buy now","HODL","FOMO","next big thing"]
-    subreddits=["CryptoCurrency", "CryptoMoonShots", "altcoin"]
-    
+async def sentiment_scores(keywords, subreddits, coin):
+    # Fetch posts
     telegram_posts = parse_posts(await TelegramPosts())
-    reddit_posts = parse_posts(redditposts(keywords,subreddits, 10))
+    reddit_posts = parse_posts(await redditposts(keywords, subreddits, 10))
 
-    # Combine posts and ensure engagement scores are included
+    # Combine posts
     parsed_posts = telegram_posts + reddit_posts
 
-    sentiment = analyze_sentiments(parsed_posts)
+    # Filter posts containing the coin
+    filtered_posts = [
+        post for post in parsed_posts 
+        if coin.lower() in post.get('selftext', '').lower() or coin.lower() in post.get('message', '').lower()
+    ]
 
-    if sentiment > 0.56:
+    # Find the post with the highest engagement
+    highest_engagement_post = max(
+        filtered_posts, 
+        key=lambda x: x.get('engagement_score', 0), 
+        default=None
+    )
+
+    if highest_engagement_post is None:
+        print("No posts found with engagement scores for the given coin.")
+        return 0, 'Neutral', None
+
+    print(f"Highest Engagement Post: {highest_engagement_post}")
+
+    # Analyze sentiments
+    sentiment = analyze_sentiments(parsed_posts) 
+    if sentiment >= 0.80:
+        sentiment_category = 'Very Positive'
+    elif sentiment >= 0.60:
         sentiment_category = 'Positive'
-    elif sentiment < 0.34:
+    elif sentiment >= 0.40:
+        sentiment_category = 'Neutral'
+    elif sentiment >= 0.20:
         sentiment_category = 'Negative'
     else:
-        sentiment_category = 'Neutral'
+        sentiment_category = 'Very Negative'
 
-    # Return both sentiment score and category
-    return sentiment, sentiment_category
+    return sentiment, sentiment_category, highest_engagement_post
 
 if __name__ == "__main__":
-    asyncio.run(sentiment_scores())
+    
+    coin = "BTC"
+    keywords=[coin,"pump","moon","100x","buy now","HODL","FOMO","next big thing"]
+    subreddits=["CryptoCurrency", "CryptoMoonShots", "altcoin"]
+    
+    asyncio.run(sentiment_scores(keywords,subreddits,coin))
