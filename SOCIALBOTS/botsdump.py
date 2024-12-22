@@ -1,6 +1,8 @@
 import asyncio
-from .redditbot import redditposts
-from .telegrambot2 import TelegramPosts
+from redditbot import redditposts
+from telegrambot2 import TelegramPosts
+from Xbot import Xposts
+from fbapi import search_posts
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 try:
@@ -69,8 +71,12 @@ def analyze_sentiments(posts):
 
         if 'title' in post and post['title']:
             print(f"Post: {post['title']}")
-        else:
+            
+        elif 'message' in post and post['message']:
             print(f"Message: {post['message']}")
+        else:
+            print(f"Tweet: {post['Tweet']}")
+             
         print(f"Sentiment Score: {sentiment:.2f} ({category}), Engagement Score: {engagement_score:.2f}\n")
 
     # Calculate weighted average sentiment
@@ -78,13 +84,15 @@ def analyze_sentiments(posts):
     return average_sentiment
     
      
-async def sentiment_scores(keywords, subreddits, coin):
+async def sentiment_scores(keywords, subreddits, coin,group_id, cookies_file):
     # Fetch posts
     telegram_posts = parse_posts(await TelegramPosts())
     reddit_posts = parse_posts(await redditposts(keywords, subreddits, 10))
+    twitter_posts = parse_posts(await Xposts()) 
+    facebook_posts = parse_posts(await search_posts(group_id, keywords, cookies_file))
 
     # Combine posts
-    parsed_posts = telegram_posts + reddit_posts
+    parsed_posts = telegram_posts + reddit_posts + twitter_posts +facebook_posts
 
     # Filter posts containing the coin
     filtered_posts = [
@@ -122,8 +130,11 @@ async def sentiment_scores(keywords, subreddits, coin):
 
 if __name__ == "__main__":
     
+    group_id = "1766546466973495"  # Example group ID
+    cookies_file = "SOCIALBOTS/fbcookies.json"
+
     coin = "BTC"
     keywords=[coin,"pump","moon","100x","buy now","HODL","FOMO","next big thing"]
     subreddits=["CryptoCurrency", "CryptoMoonShots", "altcoin"]
     
-    asyncio.run(sentiment_scores(keywords,subreddits,coin))
+    asyncio.run(sentiment_scores(keywords,subreddits,coin,group_id,cookies_file))

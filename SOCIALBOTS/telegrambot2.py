@@ -145,7 +145,7 @@ async def process_history(client, group_id, group_info, limit=10):
             # Add weights as per your logic
             engagement_score = (
                 keyword_matches * 5  # Weight for keyword matches
-                + message_length * 0.1  # Weight for message length
+                + message_length * 0.01  # Weight for message length
                 + (message.views or 0) * 0.2  # Weight for views (if available)
                 + (message.replies.replies if message.replies else 0) * 0.5  # Weight for replies
             )
