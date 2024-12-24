@@ -213,4 +213,4 @@ if __name__ == "__main__":
         for post in posts:
             print(json.dumps(post, indent=2))
 
-    asyncio.run(fbposts())
+    asyncio.run(fbposts(keywords,cookies_file,group_id))

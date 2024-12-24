@@ -162,8 +162,7 @@ def get_total_score(
     return total_score
 
 def mainscore(symbol,interval,limit):
-    client = Client()  # Public data
-    symbol = 'BTCUSDT'
+    client = Client()  # Public data, no need for API key
     interval = '1h'
     limit = 500
     klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)

@@ -1,8 +1,8 @@
 import asyncio
-from redditbot import redditposts
-from telegrambot2 import TelegramPosts
-from Xbot import Xposts
-from fbapi import search_posts
+from .redditbot import redditposts
+from .telegrambot2 import TelegramPosts
+from .Xbot import Xposts
+from .fbapi import search_posts
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 try:
@@ -84,12 +84,12 @@ def analyze_sentiments(posts):
     return average_sentiment
     
      
-async def sentiment_scores(keywords, subreddits, coin,group_id, cookies_file):
+async def sentiment_scores(keywords, subreddits, coin,group_id, cookies_file, fb_cookies):
     # Fetch posts
     telegram_posts = parse_posts(await TelegramPosts())
     reddit_posts = parse_posts(await redditposts(keywords, subreddits, 10))
-    twitter_posts = parse_posts(await Xposts()) 
-    facebook_posts = parse_posts(await search_posts(group_id, keywords, cookies_file))
+    twitter_posts = parse_posts(await Xposts(keywords, cookies_file)) 
+    facebook_posts = parse_posts(await search_posts(group_id, keywords, fb_cookies))
 
     # Combine posts
     parsed_posts = telegram_posts + reddit_posts + twitter_posts +facebook_posts
@@ -131,10 +131,11 @@ async def sentiment_scores(keywords, subreddits, coin,group_id, cookies_file):
 if __name__ == "__main__":
     
     group_id = "1766546466973495"  # Example group ID
-    cookies_file = "SOCIALBOTS/fbcookies.json"
+    fb_cookies = "SOCIALBOTS/fbcookies.json"
+    cookies_file = "SOCIALBOTS/cookies.json"
 
     coin = "BTC"
     keywords=[coin,"pump","moon","100x","buy now","HODL","FOMO","next big thing"]
     subreddits=["CryptoCurrency", "CryptoMoonShots", "altcoin"]
     
-    asyncio.run(sentiment_scores(keywords,subreddits,coin,group_id,cookies_file))
+    asyncio.run(sentiment_scores(keywords,subreddits,coin,group_id,cookies_file,fb_cookies))

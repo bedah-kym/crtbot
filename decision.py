@@ -1,7 +1,7 @@
 from dateutil import parser
 import requests
 
-def get_binance_data(symbol="BTCUSDT"):
+def get_binance_data(symbol):
     # Fetch current ticker data
     response = requests.get("https://api.binance.com/api/v3/ticker/24hr?symbol=" + symbol)
     data = response.json()

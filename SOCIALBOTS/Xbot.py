@@ -144,15 +144,8 @@ def search_tweets_with_selenium(keywords_list, cookies_path=None, username=None,
     finally:
         driver.quit()
 
-async def Xposts():
-    keywords = [
-        'crypto', '#crypto', 'bitcoin', '#bitcoin', 'ethereum', '#ethereum',
-        'bull run', 'crypto crash', 'market rally', 'whale movement',
-        'DOGE', 'SHIBA', 'SOL', 'ADA', 'Ripple', 'XRP', 'Polygon', 'MATIC',
-        'breaking news crypto', 'crypto update', 'price prediction',
-        '#CoinDesk', '#CoinTelegraph', '@elonmusk', '@cz_binance', '@CryptoWhale',
-        'metaverse', 'DeFi', 'NFTs', 'halving', 'Bitcoin ETF', 'crypto regulations'
-    ]
+async def Xposts(keywords, cookies_path, username=None, password=None):
+    
     keywords = list(set(keyword.strip() for keyword in keywords))
 
     # Define cookies file path or login credentials
