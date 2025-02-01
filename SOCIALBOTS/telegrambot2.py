@@ -15,7 +15,7 @@ load_dotenv()
 # Telegram API credentials
 API_ID = int(os.getenv('API_ID'))
 API_HASH = os.getenv('API_HASH')
-SESSION_NAME = os.getenv('SESSION_NAME', 'userbot_session')
+SESSION_NAME = os.getenv('SESSION_NAME')
 
 # Notification bot credentials
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -32,13 +32,14 @@ logger = logging.getLogger(__name__)
 config = {
     'groups': [
         {
-            'username':'FairKucoinPump',
+            'username':'FairKucoinPumpalert',
             'keywords':["pump","moon","100x","buy now","HODL","FOMO","next big thing"]
         }      
     ]
 }
 
 # Database setup
+
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('''
@@ -213,9 +214,18 @@ async def TelegramPosts():
                     await send_notification(notification_text)
                     logger.info(notification_text)
 
-    # Start listening for new messages
-    logger.info("Userbot is terminated...")
-    await client.disconnect()
+    try:
+        logger.info("Listening for new messages...")
+        await client.run_until_disconnected()
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        logger.info("Received disconnect signal. Shutting down gracefully...")
+    finally:
+        # Gracefully disconnect the client and allow pending tasks to cancel.
+        await client.disconnect()
+        # Give a short delay for tasks to cancel properly
+        await asyncio.sleep(0.5)
+        logger.info("Client disconnected gracefully.")
+
     return all_processed_messages
 
 if __name__ == '__main__':

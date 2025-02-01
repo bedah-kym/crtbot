@@ -158,6 +158,7 @@ async def search_posts(group_id, keywords, cookies_file):
     """Search posts for keywords using Selenium."""
     service = Service("C:/chromedriver-win64/chromedriver.exe")  # Update with your ChromeDriver path
     options = webdriver.ChromeOptions()
+    #options.add_argument("--headless")  
     options.add_argument("--start-maximized")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--remote-debugging-port=9222")
@@ -213,4 +214,4 @@ if __name__ == "__main__":
         for post in posts:
             print(json.dumps(post, indent=2))
 
-    asyncio.run(fbposts(keywords,cookies_file,group_id))
+    asyncio.run(fbposts())
