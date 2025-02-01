@@ -111,8 +111,9 @@ def main():
     save_summary_to_file(trades, total_pnl, total_trades)
 
     # 5) Optionally, you can send this file via Telegram/email
-    #    For example, if you have a function send_notification(file_name),
+    #    end_notification(file_name),
     #    you could do: send_notification("daily_trade_report.txt")
+")
 
 if __name__ == "__main__":
     main()
